@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Recipe Book</title>
+  <style>
+    /* ── Reset & Variables ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #fdfaf6;
+      --surface:   #ffffff;
+      --border:    #e8e0d5;
+      --accent:    #c8703a;
+      --accent-lt: #f5ece4;
+      --text:      #2d2519;
+      --muted:     #7a6a59;
+      --star:      #e8a020;
+      --radius:    12px;
+      --shadow:    0 2px 12px rgba(0,0,0,0.07);
+    }
+
+    body {
+      font-family: 'Georgia', serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--accent);
+      color: #fff;
+      padding: 28px 24px 20px;
+      text-align: center;
+    }
+    header h1 { font-size: 2rem; letter-spacing: 0.03em; }
+    header p  { margin-top: 4px; opacity: 0.85; font-style: italic; font-size: 0.95rem; }
+
+    /* ── Search bar ── */
+    .search-wrap {
+      max-width: 680px;
+      margin: 28px auto 0;
+      padding: 0 16px;
+    }
+    .search-wrap label {
+      display: block;
+      font-size: 0.8rem;
+      font-family: sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .search-wrap input {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      font-size: 1rem;
+      font-family: sans-serif;
+      background: var(--surface);
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .search-wrap input:focus { border-color: var(--accent); }
+    .search-hint {
+      font-size: 0.8rem;
+      color: var(--muted);
+      font-family: sans-serif;
+      margin-top: 6px;
+    }
+
+    /* ── Layout ── */
+    main {
+      max-width: 1100px;
+      margin: 32px auto 60px;
+      padding: 0 16px;
+    }
+
+    /* ── Section heading ── */
+    .section-heading {
+      font-size: 1.3rem;
+      border-bottom: 2px solid var(--accent);
+      padding-bottom: 6px;
+      margin: 36px 0 20px;
+      color: var(--accent);
+      font-style: italic;
+    }
+
+    /* ── Recipe grid ── */
+    .recipe-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+    }
+
+    /* ── Recipe card ── */
+    .recipe-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.15s, box-shadow 0.15s;
+      cursor: pointer;
+    }
+    .recipe-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.1); }
+    .recipe-card.highlighted { outline: 2px solid var(--accent); }
+
+    .card-img {
+      width: 100%;
+      height: 160px;
+      object-fit: cover;
+      background: var(--accent-lt);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3rem;
+    }
+
+    .card-body { padding: 14px 16px 10px; flex: 1; }
+    .card-title-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .card-title {
+      font-size: 1.05rem;
+      line-height: 1.3;
+      flex: 1;
+    }
+    .star-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1.4rem;
+      line-height: 1;
+      color: var(--border);
+      transition: color 0.15s, transform 0.15s;
+      flex-shrink: 0;
+      padding: 0 2px;
+    }
+    .star-btn.starred  { color: var(--star); }
+    .star-btn:hover    { transform: scale(1.2); }
+
+    .card-meta {
+      font-size: 0.78rem;
+      font-family: sans-serif;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+    .card-desc {
+      font-size: 0.88rem;
+      color: var(--muted);
+      margin-top: 8px;
+      line-height: 1.5;
+    }
+
+    .card-ingredients {
+      margin-top: 10px;
+      font-family: sans-serif;
+      font-size: 0.78rem;
+    }
+    .card-ingredients span.match {
+      display: inline-block;
+      background: var(--accent-lt);
+      color: var(--accent);
+      border-radius: 4px;
+      padding: 1px 6px;
+      margin: 2px 2px 0 0;
+      font-weight: 600;
+    }
+    .card-ingredients span.plain {
+      display: inline-block;
+      color: var(--muted);
+      padding: 1px 0;
+      margin: 2px 2px 0 0;
+    }
+
+    /* ── No results ── */
+    .no-results {
+      text-align: center;
+      color: var(--muted);
+      font-style: italic;
+      padding: 48px 0;
+      font-family: sans-serif;
+    }
+
+    /* ── Modal overlay ── */
+    .overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45);
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      z-index: 100;
+      padding: 24px 16px;
+      overflow-y: auto;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    .overlay.open { opacity: 1; pointer-events: all; }
+
+    .modal {
+      background: var(--surface);
+      border-radius: var(--radius);
+      max-width: 660px;
+      width: 100%;
+      padding: 32px;
+      position: relative;
+      transform: translateY(12px);
+      transition: transform 0.2s;
+      margin: auto;
+    }
+    .overlay.open .modal { transform: translateY(0); }
+
+    .modal-close {
+      position: absolute;
+      top: 16px; right: 16px;
+      background: none; border: none;
+      font-size: 1.5rem; cursor: pointer;
+      color: var(--muted);
+      line-height: 1;
+    }
+    .modal-close:hover { color: var(--text); }
+
+    .modal-header { display: flex; align-items: flex-start; gap: 12px; }
+    .modal-title  { font-size: 1.6rem; flex: 1; line-height: 1.2; }
+    .modal-meta   { font-family: sans-serif; font-size: 0.82rem; color: var(--muted); margin-top: 6px; }
+
+    .modal hr { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+
+    .modal h3 {
+      font-size: 0.75rem;
+      font-family: sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .ingredient-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+    .ingredient-pill {
+      background: var(--accent-lt);
+      color: var(--accent);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-family: sans-serif;
+      font-size: 0.82rem;
+    }
+
+    .steps-list { list-style: none; }
+    .steps-list li {
+      display: flex;
+      gap: 14px;
+      margin-bottom: 14px;
+      font-size: 0.92rem;
+      line-height: 1.6;
+    }
+    .step-num {
+      background: var(--accent);
+      color: #fff;
+      border-radius: 50%;
+      min-width: 26px;
+      height: 26px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: sans-serif;
+      font-size: 0.75rem;
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    /* ── Notes area ── */
+    .notes-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .notes-saved-badge {
+      font-family: sans-serif;
+      font-size: 0.72rem;
+      color: #5a9e5a;
+      opacity: 0;
+      transition: opacity 0.4s;
+    }
+    .notes-saved-badge.show { opacity: 1; }
+
+    .notes-area {
+      width: 100%;
+      min-height: 100px;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-family: sans-serif;
+      font-size: 0.88rem;
+      color: var(--text);
+      resize: vertical;
+      background: #fafaf8;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .notes-area:focus { border-color: var(--accent); }
+
+    /* ── Favorites filter button ── */
+    .toolbar {
+      max-width: 680px;
+      margin: 14px auto 0;
+      padding: 0 16px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .filter-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-family: sans-serif;
+      font-size: 0.82rem;
+      cursor: pointer;
+      color: var(--muted);
+      transition: all 0.15s;
+    }
+    .filter-btn.active {
+      background: var(--star);
+      color: #fff;
+      border-color: var(--star);
+    }
+    .filter-btn:hover:not(.active) { border-color: var(--accent); color: var(--accent); }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>📖 My Recipe Book</h1>
+  <p>A collection of favourite meals</p>
+</header>
+
+<div class="search-wrap">
+  <label for="search">Search by ingredient</label>
+  <input id="search" type="text" placeholder="e.g. garlic, lemon, chicken…" autocomplete="off" />
+  <div class="search-hint" id="search-hint"></div>
+</div>
+
+<div class="toolbar">
+  <button class="filter-btn" id="fav-filter-btn" onclick="toggleFavFilter()">⭐ Show Favourites</button>
+</div>
+
+<main id="main"></main>
+
+<!-- Recipe modal -->
+<div class="overlay" id="overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal">
+    <button class="modal-close" onclick="closeOverlay()">✕</button>
+
+    <div class="modal-header">
+      <div style="flex:1">
+        <div class="modal-title" id="m-title"></div>
+        <div class="modal-meta" id="m-meta"></div>
+      </div>
+      <button class="star-btn" id="m-star" onclick="toggleStarModal()"></button>
+    </div>
+
+    <hr />
+
+    <h3>Ingredients</h3>
+    <div class="ingredient-list" id="m-ingredients"></div>
+
+    <hr />
+
+    <h3>Method</h3>
+    <ol class="steps-list" id="m-steps"></ol>
+
+    <hr />
+
+    <h3 class="notes-label">
+      <span>Notes &amp; Comments</span>
+      <span class="notes-saved-badge" id="saved-badge">Saved ✓</span>
+    </h3>
+    <textarea class="notes-area" id="m-notes" placeholder="Add your personal notes here…"></textarea>
+  </div>
+</div>
+
+<script src="recipes.js"></script>
+<script>
+  // ── State ──────────────────────────────────────────────
+  let query       = "";
+  let favOnly     = false;
+  let activeId    = null;
+  let saveTimer   = null;
+
+  function getStars() {
+    try { return JSON.parse(localStorage.getItem("rb_stars") || "{}"); } catch { return {}; }
+  }
+  function getNotes() {
+    try { return JSON.parse(localStorage.getItem("rb_notes") || "{}"); } catch { return {}; }
+  }
+  function saveStar(id, val) {
+    const s = getStars(); s[id] = val;
+    localStorage.setItem("rb_stars", JSON.stringify(s));
+  }
+  function saveNote(id, text) {
+    const n = getNotes(); n[id] = text;
+    localStorage.setItem("rb_notes", JSON.stringify(n));
+  }
+
+  // ── Render ─────────────────────────────────────────────
+  function render() {
+    const main   = document.getElementById("main");
+    const stars  = getStars();
+    const hint   = document.getElementById("search-hint");
+    const q      = query.trim().toLowerCase();
+    const terms  = q ? q.split(/[\s,]+/).filter(Boolean) : [];
+
+    let filtered = RECIPES.filter(r => {
+      if (favOnly && !stars[r.id]) return false;
+      if (!terms.length) return true;
+      return terms.every(t => r.ingredients.some(i => i.toLowerCase().includes(t)));
+    });
+
+    // Update search hint
+    if (terms.length) {
+      hint.textContent = `${filtered.length} recipe${filtered.length !== 1 ? "s" : ""} found`;
+    } else {
+      hint.textContent = "";
+    }
+
+    // Group by section
+    const bySection = {};
+    filtered.forEach(r => {
+      if (!bySection[r.section]) bySection[r.section] = [];
+      bySection[r.section].push(r);
+    });
+
+    if (!filtered.length) {
+      main.innerHTML = `<div class="no-results">No recipes match your search. Try a different ingredient!</div>`;
+      return;
+    }
+
+    main.innerHTML = "";
+    SECTIONS.forEach(sec => {
+      if (!bySection[sec]) return;
+      const wrap = document.createElement("div");
+      wrap.innerHTML = `<div class="section-heading">${sec}</div>`;
+      const grid = document.createElement("div");
+      grid.className = "recipe-grid";
+      bySection[sec].forEach(r => {
+        grid.appendChild(buildCard(r, terms, stars));
+      });
+      wrap.appendChild(grid);
+      main.appendChild(wrap);
+    });
+  }
+
+  function buildCard(recipe, terms, stars) {
+    const card = document.createElement("div");
+    card.className = "recipe-card";
+    card.setAttribute("tabindex", "0");
+    card.setAttribute("role", "button");
+    card.setAttribute("aria-label", recipe.title);
+
+    const starred = !!stars[recipe.id];
+
+    // Image / emoji placeholder
+    const imgEl = recipe.image
+      ? `<img class="card-img" src="${recipe.image}" alt="${recipe.title}" />`
+      : `<div class="card-img">🍽️</div>`;
+
+    // Highlight matching ingredients
+    const ingHTML = recipe.ingredients.map(i => {
+      const isMatch = terms.length && terms.some(t => i.toLowerCase().includes(t));
+      return `<span class="${isMatch ? "match" : "plain"}">${i}</span>`;
+    }).join(" ");
+
+    card.innerHTML = `
+      ${imgEl}
+      <div class="card-body">
+        <div class="card-title-row">
+          <div class="card-title">${recipe.title}</div>
+          <button class="star-btn ${starred ? "starred" : ""}" data-id="${recipe.id}" title="Favourite" onclick="toggleStar(event, '${recipe.id}')">★</button>
+        </div>
+        <div class="card-meta">⏱ ${recipe.time} &nbsp;·&nbsp; 🍽 ${recipe.servings} servings</div>
+        <div class="card-desc">${recipe.description}</div>
+        <div class="card-ingredients">${ingHTML}</div>
+      </div>`;
+
+    card.addEventListener("click", e => {
+      if (e.target.classList.contains("star-btn")) return;
+      openModal(recipe.id);
+    });
+    card.addEventListener("keydown", e => {
+      if (e.key === "Enter" || e.key === " ") openModal(recipe.id);
+    });
+    return card;
+  }
+
+  // ── Star toggle ────────────────────────────────────────
+  function toggleStar(evt, id) {
+    evt.stopPropagation();
+    const s = getStars();
+    saveStar(id, !s[id]);
+    render();
+    // If modal is open for this recipe, sync star button
+    if (activeId === id) updateModalStar();
+  }
+
+  function toggleStarModal() {
+    if (!activeId) return;
+    const s = getStars();
+    saveStar(activeId, !s[activeId]);
+    updateModalStar();
+    render();
+  }
+
+  function updateModalStar() {
+    const btn = document.getElementById("m-star");
+    const starred = !!getStars()[activeId];
+    btn.textContent = "★";
+    btn.className   = "star-btn" + (starred ? " starred" : "");
+    btn.title       = starred ? "Remove from favourites" : "Add to favourites";
+  }
+
+  // ── Fav filter ─────────────────────────────────────────
+  function toggleFavFilter() {
+    favOnly = !favOnly;
+    document.getElementById("fav-filter-btn").classList.toggle("active", favOnly);
+    render();
+  }
+
+  // ── Modal ──────────────────────────────────────────────
+  function openModal(id) {
+    const recipe = RECIPES.find(r => r.id === id);
+    if (!recipe) return;
+    activeId = id;
+
+    document.getElementById("m-title").textContent = recipe.title;
+    document.getElementById("m-meta").textContent  = `⏱ ${recipe.time}  ·  🍽 ${recipe.servings} servings`;
+
+    // Ingredients
+    const ingWrap = document.getElementById("m-ingredients");
+    ingWrap.innerHTML = recipe.ingredients.map(i =>
+      `<span class="ingredient-pill">${i}</span>`
+    ).join("");
+
+    // Steps
+    const stepList = document.getElementById("m-steps");
+    stepList.innerHTML = recipe.steps.map((s, i) =>
+      `<li><span class="step-num">${i+1}</span><span>${s}</span></li>`
+    ).join("");
+
+    // Notes
+    const notes = getNotes();
+    document.getElementById("m-notes").value = notes[id] || "";
+    document.getElementById("saved-badge").classList.remove("show");
+
+    updateModalStar();
+
+    document.getElementById("overlay").classList.add("open");
+    document.body.style.overflow = "hidden";
+    document.getElementById("m-notes").focus();
+  }
+
+  function closeOverlay() {
+    document.getElementById("overlay").classList.remove("open");
+    document.body.style.overflow = "";
+    activeId = null;
+  }
+
+  function closeModal(e) {
+    if (e.target === document.getElementById("overlay")) closeOverlay();
+  }
+
+  // ── Notes autosave ─────────────────────────────────────
+  document.getElementById("m-notes").addEventListener("input", function() {
+    if (!activeId) return;
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      saveNote(activeId, this.value);
+      const badge = document.getElementById("saved-badge");
+      badge.classList.add("show");
+      setTimeout(() => badge.classList.remove("show"), 2000);
+    }, 600);
+  });
+
+  // ── Search input ───────────────────────────────────────
+  document.getElementById("search").addEventListener("input", function() {
+    query = this.value;
+    render();
+  });
+
+  // ── Keyboard close ─────────────────────────────────────
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape") closeOverlay();
+  });
+
+  // ── Initial render ─────────────────────────────────────
+  render();
+</script>
+</body>
+</html>
